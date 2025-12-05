@@ -262,6 +262,10 @@ Route::middleware(['auth', 'verified', CheckAdmin::class])
         ->name('product_variants.destroy');
     Route::get('variants', [ProductVariantController::class, 'index'])
         ->name('product_variants.index');
+    Route::get('/', function () {
+    return view('welcome');
+});
+
 
     /*
     |--------------------------------------------------------------------------
