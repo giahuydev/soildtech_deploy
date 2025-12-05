@@ -24,7 +24,7 @@ class OrderDemoSeeder extends Seeder
 
         $variants = ProductVariant::with('product')->inRandomOrder()->get();
         $users    = User::all();
-        $statuses = ['pending', 'processing', 'shipped', 'completed', 'cancelled'];
+        $statuses = ['pending', 'completed', 'failed', 'cancelled'];
 
         for ($i = 0; $i < 45; $i++) {
             $user  = $users->random();
