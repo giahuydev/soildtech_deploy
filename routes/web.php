@@ -6,20 +6,21 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\Login\LoginController;
-use App\Http\Controllers\Auth\ForgotPasswordController;
-use App\Http\Controllers\Auth\GoogleController;
-use App\Http\Controllers\Product\CartController;
-use App\Http\Controllers\Product\ProductController as UserProductController;
-use App\Http\Controllers\BrandController as UserBrandController;
-use App\Http\Controllers\Payment\MoMoController;
-use App\Http\Controllers\UserController;
+// ============= USER CONTROLLERS =============
+use App\Http\Controllers\User\HomeController;
+use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\User\BrandController as UserBrandController;
+use App\Http\Controllers\User\Auth\ForgotPasswordController;
+use App\Http\Controllers\User\Auth\GoogleController;
+use App\Http\Controllers\User\Login\LoginController;
+use App\Http\Controllers\User\Product\CartController;
+use App\Http\Controllers\User\Product\ProductController as UserProductController;
+use App\Http\Controllers\User\Payment\MoMoController;
 
+// ============= ADMIN CONTROLLERS =============
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\BrandController as AdminBrandController;
-use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductVariantController;
 
@@ -42,7 +43,8 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Google OAuth
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
-Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
+Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])
+    ->middleware('throttle:10,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -70,7 +72,7 @@ Route::get('/email/verify', function () {
     if (Auth::check() && Auth::user()->hasVerifiedEmail()) {
         return redirect('/')->with('info', 'Email của bạn đã được xác thực.');
     }
-    return view('auth.verify-email');
+    return view('user.auth.verify-email');
 })->middleware('auth')->name('verification.notice');
 
 Route::get('/email/verify/{id}/{hash}', function (Request $request) {
@@ -204,35 +206,11 @@ Route::middleware(['auth', 'verified', CheckAdmin::class])
         Route::resource('brands', AdminBrandController::class);
         
         // ========== PRODUCT VARIANTS ==========
-        // Thêm variant vào sản phẩm
         Route::post('products/{product}/variants', [ProductVariantController::class, 'store'])
             ->name('product_variants.store');
         
-        // Quản lý variants (giữ tên cũ để tương thích với view)
-        Route::prefix('variants')->name('product_variants.')->group(function () {
-            Route::get('/', [ProductVariantController::class, 'index'])->name('index');
-            Route::get('/{variant}/edit', [ProductVariantController::class, 'edit'])->name('edit');
-            Route::put('/{variant}', [ProductVariantController::class, 'update'])->name('update');
-            Route::delete('/{variant}', [ProductVariantController::class, 'destroy'])->name('destroy');
-            Route::post('/{variant}/update-quantity', [ProductVariantController::class, 'updateQuantity'])
-                ->name('update_quantity');
-            Route::post('/bulk-update', [ProductVariantController::class, 'bulkUpdateQuantity'])
-                ->name('bulk_update');
-        });
-        
-        // ========== INVENTORY (KHO HÀNG) ==========
-        Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
-        
-        Route::prefix('inventory')->name('inventory.')->group(function () {
-            Route::post('/variants/{variant}/update-quantity', [InventoryController::class, 'updateQuantity'])
-                ->name('update_quantity');
-            Route::delete('/variants/{variant}', [InventoryController::class, 'destroy'])
-                ->name('destroy');
-            Route::post('/bulk-delete', [InventoryController::class, 'bulkDelete'])
-                ->name('bulk_delete');
-            Route::delete('/products/{product}/delete-all-variants', [InventoryController::class, 'deleteAllVariantsOfProduct'])
-                ->name('delete_all_variants');
-        });
+        Route::delete('variants/{variant}', [ProductVariantController::class, 'destroy'])
+            ->name('product_variants.destroy');
         
         // ========== ORDERS ==========
         Route::prefix('orders')->name('orders.')->group(function () {
