@@ -65,15 +65,20 @@ class GoogleController extends Controller
 
             Log::info('Google login successful', ['user_id' => $user->id]);
 
-            // Redirect về trang chủ (không dùng intended)
             return redirect('/')
                 ->with('success', "Đăng nhập Google thành công! Chào {$user->name}");
 
         } catch (Exception $e) {
-            Log::error('Google Login Error: ' . $e->getMessage());
+            // THÊM LOG CHI TIẾT HƠN
+            Log::error('Google Login Error: ' . $e->getMessage(), [
+                'exception' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return redirect()->route('login')
-                ->with('error', 'Đăng nhập Google thất bại! Vui lòng thử lại.');
+                ->with('error', 'Đăng nhập Google thất bại! Vui lòng thử lại. Lỗi: ' . $e->getMessage());
         }
     }
 }

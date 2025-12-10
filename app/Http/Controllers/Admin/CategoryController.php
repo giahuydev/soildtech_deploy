@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class CategoryController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Hiển thị danh sách danh mục.
      */
     public function index()
     {
@@ -19,7 +19,7 @@ class CategoryController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Hiển thị form tạo mới danh mục.
      */
     public function create()
     {
@@ -27,37 +27,29 @@ class CategoryController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Lưu danh mục mới vào database.
      */
     public function store(Request $request)
     {
-       $request->validate([
+        $request->validate([
             'name' => 'required|unique:categories,name|max:255',
         ], [
             'name.required' => 'Tên danh mục không được để trống.',
-            'name.unique' => 'Tên danh mục này đã tồn tại.',
+            'name.unique' => 'Tên danh mục đã tồn tại.',
         ]);
 
         Category::create([
             'name' => $request->name,
-            'slug' => Str::slug($request->name), // Tự động tạo slug (vd: Giày Nam -> giay-nam)
+            'slug' => Str::slug($request->name),
             'description' => $request->description,
-            'is_active' => $request->has('is_active') ? 1 : 0
+            'is_active' => $request->has('is_active') ? 1 : 0,
         ]);
 
-        return redirect()->route('categories.index')->with('success', 'Thêm danh mục thành công!');
+        return redirect()->route('admin.categories.index')->with('success', 'Thêm danh mục thành công!');
     }
 
     /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
+     * Hiển thị form chỉnh sửa danh mục.
      */
     public function edit(Category $category)
     {
@@ -65,30 +57,33 @@ class CategoryController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Cập nhật danh mục đã chọn.
      */
     public function update(Request $request, Category $category)
     {
         $request->validate([
-            'name' => 'required|max:255|unique:categories,name,'.$category->id,
+            'name' => 'required|max:255|unique:categories,name,' . $category->id,
+        ], [
+            'name.required' => 'Tên danh mục không được để trống.',
+            'name.unique' => 'Tên danh mục đã tồn tại.',
         ]);
 
         $category->update([
             'name' => $request->name,
             'slug' => Str::slug($request->name),
             'description' => $request->description,
-            'is_active' => $request->has('is_active') ? 1 : 0
+            'is_active' => $request->has('is_active') ? 1 : 0,
         ]);
 
-        return redirect()->route('categories.index')->with('success', 'Cập nhật thành công!');
+        return redirect()->route('admin.categories.index')->with('success', 'Cập nhật danh mục thành công!');
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Xóa danh mục đã chọn.
      */
     public function destroy(Category $category)
     {
         $category->delete();
-        return redirect()->route('categories.index')->with('success', 'Đã xóa danh mục!');
+        return redirect()->route('admin.categories.index')->with('success', 'Đã xóa danh mục!');
     }
 }

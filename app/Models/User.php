@@ -43,6 +43,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * ✅ THÊM METHOD NÀY - Gửi email reset password tùy chỉnh
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new \App\Notifications\CustomResetPassword($token));
+    }
+
+    /**
      * Quan hệ: 1 user có nhiều đơn hàng
      */
     public function orders()

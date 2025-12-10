@@ -11,7 +11,23 @@
     <link href="https://cdn.jsdelivr.net/npm/startbootstrap-sb-admin-2@4.1.4/css/sb-admin-2.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        .bg-gradient-primary { background-color: #4e73df; background-image: linear-gradient(180deg,#4e73df 10%,#224abe 100%); }
+        .bg-gradient-primary { 
+            background-color: #4e73df; 
+            background-image: linear-gradient(180deg,#4e73df 10%,#224abe 100%); 
+        }
+        
+        /* Highlight active menu */
+        .nav-item.active .nav-link {
+            font-weight: 600;
+        }
+        
+        .sidebar .nav-item .nav-link {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-item .nav-link:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
     </style>
 </head>
 
@@ -25,35 +41,60 @@
                 <div class="sidebar-brand-text mx-3">SOLID Admin</div>
             </a>
             <hr class="sidebar-divider my-0">
-            <li class="nav-item active">
+            
+            <!-- Dashboard -->
+            <li class="nav-item {{ Request::routeIs('admin.dashboard') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('admin.dashboard') }}">
-                    <i class="fas fa-fw fa-tachometer-alt"></i><span>Tổng quan</span>
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>Tổng quan</span>
                 </a>
             </li>
+            
             <hr class="sidebar-divider">
             <div class="sidebar-heading">Kinh doanh</div>
-            <li class="nav-item">
+            
+            <!-- Categories -->
+            <li class="nav-item {{ Request::routeIs('admin.categories.*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('admin.categories.index') }}">
-                    <i class="fas fa-fw fa-folder"></i><span>Danh mục & Hãng</span>
+                    <i class="fas fa-fw fa-folder"></i>
+                    <span>Danh mục sản phẩm</span>
                 </a>
             </li>
-            <li class="nav-item">
+            
+            <!-- Brands - MENU MỚI -->
+            <li class="nav-item {{ Request::routeIs('admin.brands.*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('admin.brands.index') }}">
+                    <i class="fas fa-fw fa-tags"></i>
+                    <span>Thương hiệu</span>
+                </a>
+            </li>
+            
+            <!-- Products -->
+            <li class="nav-item {{ Request::routeIs('admin.products.*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('admin.products.index') }}">
-                    <i class="fas fa-fw fa-box"></i><span>Quản lý Sản phẩm</span>
+                    <i class="fas fa-fw fa-box"></i>
+                    <span>Quản lý Sản phẩm</span>
                 </a>
             </li>
-            <li class="nav-item">
+            
+            <!-- Inventory -->
+            <li class="nav-item {{ Request::routeIs('admin.inventory') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('admin.inventory') }}">
                     <i class="fas fa-fw fa-boxes"></i>
                     <span>Quản lý Kho Hàng</span>
                 </a>
             </li>
-            <li class="nav-item">
+            
+            <!-- Orders -->
+            <li class="nav-item {{ Request::routeIs('admin.orders.*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('admin.orders.index') }}">
-                    <i class="fas fa-fw fa-shopping-cart"></i><span>Đơn hàng</span>
+                    <i class="fas fa-fw fa-shopping-cart"></i>
+                    <span>Đơn hàng</span>
                 </a>
             </li>
+            
             <hr class="sidebar-divider">
+            
             <div class="text-center d-none d-md-inline">
                 <button class="rounded-circle border-0" id="sidebarToggle"></button>
             </div>
@@ -91,6 +132,27 @@
                 </nav>
 
                 <div class="container-fluid">
+                    <!-- Flash Messages -->
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Thành công!</strong> {{ session('success') }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Lỗi!</strong> {{ session('error') }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    @endif
+
                     @yield('content')
                 </div>
 
@@ -159,6 +221,13 @@
                 }
             });
         });
+        
+        // Auto hide alerts after 5 seconds
+        window.setTimeout(function() {
+            $(".alert").fadeTo(500, 0).slideUp(500, function(){
+                $(this).remove(); 
+            });
+        }, 5000);
     </script>
     
     @yield('scripts')

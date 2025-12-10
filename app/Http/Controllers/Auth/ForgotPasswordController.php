@@ -29,9 +29,14 @@ class ForgotPasswordController extends Controller
     }
 
     // Hiện form nhập mật khẩu mới
-    public function showResetForm($token)
+    public function showResetForm(Request $request, $token)
     {
-        return view('auth.reset_password', ['token' => $token]);
+        // FIX LỖI VIEW: Gọi đúng tên file view trong thư mục auth/
+        // Dựa trên cây thư mục: resources/views/auth/reset_password.blade.php
+        return view('auth.reset_password', [
+            'token' => $token,
+            'email' => $request->email,
+        ]);
     }
 
     // Submit đặt mật khẩu mới

@@ -4,14 +4,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\CheckAdmin;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
-/*
-|--------------------------------------------------------------------------
-| CONTROLLERS USER
-|--------------------------------------------------------------------------
-*/
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Login\LoginController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Product\CartController;
 use App\Http\Controllers\Product\ProductController as UserProductController;
@@ -19,11 +16,6 @@ use App\Http\Controllers\BrandController as UserBrandController;
 use App\Http\Controllers\Payment\MoMoController;
 use App\Http\Controllers\UserController;
 
-/*
-|--------------------------------------------------------------------------
-| CONTROLLERS ADMIN
-|--------------------------------------------------------------------------
-*/
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\BrandController as AdminBrandController;
@@ -38,133 +30,117 @@ use App\Http\Controllers\Admin\ProductVariantController;
 */
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-
 /*
 |--------------------------------------------------------------------------
-| AUTHENTICATION ROUTES
+| AUTHENTICATION
 |--------------------------------------------------------------------------
 */
-
-// Login – Register form
 Route::get('/login', [LoginController::class, 'showLoginRegister'])->name('login');
-
-// Submit login
 Route::post('/login', [LoginController::class, 'login']);
-
-// Submit register
 Route::post('/register', [LoginController::class, 'register'])->name('register');
-
-// Logout
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
-
 
 // Google OAuth
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 
+/*
+|--------------------------------------------------------------------------
+| FORGOT PASSWORD
+|--------------------------------------------------------------------------
+*/
+Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm']) 
+    ->middleware('guest')->name('password.request');
+
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+    ->middleware('guest')->name('password.email');
+
+Route::get('/password/reset/{token}', [ForgotPasswordController::class, 'showResetForm']) 
+    ->middleware('guest')->name('password.reset');
+
+Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])
+    ->middleware('guest')->name('password.update');
 
 /*
 |--------------------------------------------------------------------------
-| FORGOT PASSWORD (THIẾU → ĐÃ BỔ SUNG)
+| EMAIL VERIFICATION
 |--------------------------------------------------------------------------
 */
-
-// Form nhập email để gửi link reset
-// Hiển thị form nhập email để nhận link reset password
-Route::get('/forgot_password', function () {
-    return view('auth.forgot_password');
-})
-->middleware('guest')
-->name('password.request');
-
-// Gửi email reset password
-Route::post('/forgot_password', [LoginController::class, 'sendResetLink'])
-    ->middleware('guest')
-    ->name('password.email');
-
-// Hiển thị form nhập mật khẩu mới
-Route::get('/reset_password/{token}', function ($token) {
-    return view('auth.reset_password', ['token' => $token]);
-})
-->middleware('guest')
-->name('password.reset');
-
-// Submit để đặt mật khẩu mới
-Route::post('/reset_password', [LoginController::class, 'resetPassword'])
-    ->middleware('guest')
-    ->name('password.update');
-
-
-/*
-|--------------------------------------------------------------------------
-| EMAIL VERIFICATION ROUTES
-|--------------------------------------------------------------------------
-*/
-
-// Trang yêu cầu xác thực email
 Route::get('/email/verify', function () {
+    if (Auth::check() && Auth::user()->hasVerifiedEmail()) {
+        return redirect('/')->with('info', 'Email của bạn đã được xác thực.');
+    }
     return view('auth.verify-email');
 })->middleware('auth')->name('verification.notice');
 
-// Link xác thực email
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
-    return redirect('/login')->with('success', 'Email đã được xác thực!');
+Route::get('/email/verify/{id}/{hash}', function (Request $request) {
+    $user = \App\Models\User::findOrFail($request->route('id'));
+
+    if (!hash_equals(sha1($user->getEmailForVerification()), (string) $request->route('hash'))) {
+        abort(403, 'Link xác thực không hợp lệ.');
+    }
+
+    if (!$request->hasValidSignature()) {
+        return redirect()->route('login')
+            ->with('error', 'Link xác thực đã hết hạn. Vui lòng đăng nhập và gửi lại email xác thực.');
+    }
+
+    if ($user->hasVerifiedEmail()) {
+        return redirect()->route('login')
+            ->with('info', 'Email này đã được xác thực. Bạn có thể đăng nhập.');
+    }
+
+    $user->markEmailAsVerified();
+    Auth::login($user);
+
+    return redirect('/')
+        ->with('success', '🎉 Email đã được xác thực thành công! Chào mừng ' . $user->name . ' đến với SOLID TECH!');
+        
 })->middleware(['signed'])->name('verification.verify');
 
-// Gửi lại email verify
 Route::post('/email/verification-notification', function (Request $request) {
+    if ($request->user()->hasVerifiedEmail()) {
+        return back()->with('info', 'Email của bạn đã được xác thực rồi.');
+    }
+
     $request->user()->sendEmailVerificationNotification();
-    return back()->with('success', 'Email xác thực đã được gửi lại.');
+
+    return back()->with('success', 'Email xác thực đã được gửi lại! Vui lòng kiểm tra hộp thư.');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
-// Gửi lại từ trang login (không cần login)
 Route::post('/email/resend', [LoginController::class, 'resendVerificationEmail'])
     ->middleware('throttle:6,1')
     ->name('verification.resend');
 
-
 /*
 |--------------------------------------------------------------------------
-| USER PROFILE + ORDERS (AUTH + VERIFIED)
+| USER PROFILE & ORDERS (Cần verify email)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified'])
-    ->prefix('user')
-    ->name('user.')
-    ->group(function () {
-
+Route::middleware(['auth', 'verified'])->prefix('user')->name('user.')->group(function () {
     Route::get('/profile', [UserController::class, 'profile'])->name('profile');
     Route::post('/profile/update', [UserController::class, 'updateProfile'])->name('profile.update');
-
-    // Orders
     Route::get('/orders', [UserController::class, 'orders'])->name('orders');
     Route::get('/orders/{id}', [UserController::class, 'orderDetail'])->name('order.detail');
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| CART ROUTES (AUTH + VERIFIED)
+| CART (Cần verify email)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified'])
-    ->prefix('cart')
-    ->name('cart.')
-    ->group(function () {
-
+Route::middleware(['auth', 'verified'])->prefix('cart')->name('cart.')->group(function () {
     Route::get('/', [CartController::class, 'index'])->name('index');
     Route::post('/add', [CartController::class, 'add'])->name('add');
     Route::post('/remove/{id}', [CartController::class, 'remove'])->name('remove');
     Route::post('/update/{id}', [CartController::class, 'update'])->name('update');
     Route::post('/clear', [CartController::class, 'clear'])->name('clear');
-    Route::get('/count', [CartController::class, 'count'])->name('count');
+    Route::post('/count', [CartController::class, 'count'])->name('count');
 });
-
 
 /*
 |--------------------------------------------------------------------------
-| PRODUCT ROUTES (PUBLIC)
+| PRODUCTS (Public)
 |--------------------------------------------------------------------------
 */
 Route::get('/san-pham', [UserProductController::class, 'index'])->name('shop.index');
@@ -172,37 +148,29 @@ Route::get('/san-pham/{slug}.html', [UserProductController::class, 'detail'])->n
 Route::get('/danh-muc/{slug}', [UserProductController::class, 'getByCategory'])->name('shop.category');
 Route::get('/hot-sale', [UserProductController::class, 'hotSale'])->name('shop.hotSale');
 
-
 /*
 |--------------------------------------------------------------------------
-| BRAND ROUTES (PUBLIC)
+| BRANDS (Public)
 |--------------------------------------------------------------------------
 */
 Route::get('/thuong-hieu', [UserBrandController::class, 'index'])->name('brands.index');
 Route::get('/thuong-hieu/{slug}', [UserBrandController::class, 'show'])->name('brands.show');
 
-
 /*
 |--------------------------------------------------------------------------
-| PAYMENT (AUTH + VERIFIED)
+| PAYMENT (Cần verify email)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified'])
-    ->prefix('payment')
-    ->name('payment.')
-    ->group(function () {
-
+Route::middleware(['auth', 'verified'])->prefix('payment')->name('payment.')->group(function () {
     Route::get('/checkout', [MoMoController::class, 'showCheckout'])->name('checkout');
     Route::post('/process', [MoMoController::class, 'processPayment'])->name('process');
-
     Route::get('/success/{orderId}', [MoMoController::class, 'success'])->name('success');
     Route::get('/failed/{orderId}', [MoMoController::class, 'failed'])->name('failed');
 });
 
-// Callback MoMo
+// MoMo Callbacks (Public)
 Route::get('/payment/momo/callback', [MoMoController::class, 'callback'])->name('momo.callback');
 Route::post('/payment/momo/ipn', [MoMoController::class, 'ipn'])->name('momo.ipn');
-
 
 /*
 |--------------------------------------------------------------------------
@@ -213,7 +181,6 @@ Route::view('/return-policy', 'user.return_policy')->name('return.policy');
 Route::view('/about', 'user.about')->name('about');
 Route::view('/contact', 'user.contact')->name('contact');
 
-
 /*
 |--------------------------------------------------------------------------
 | ADMIN ROUTES
@@ -223,57 +190,55 @@ Route::middleware(['auth', 'verified', CheckAdmin::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    // Inventory
-    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
-
-    /*
-    |--------------------------------------------------------------------------
-    | CRUD PRODUCTS
-    |--------------------------------------------------------------------------
-    */
-    Route::resource('products', AdminProductController::class);
-
-    /*
-    |--------------------------------------------------------------------------
-    | CRUD CATEGORIES
-    |--------------------------------------------------------------------------
-    */
-    Route::resource('categories', CategoryController::class);
-
-    /*
-    |--------------------------------------------------------------------------
-    | CRUD BRANDS
-    |--------------------------------------------------------------------------
-    */
-    Route::resource('brands', AdminBrandController::class);
-
-    /*
-    |--------------------------------------------------------------------------
-    | PRODUCT VARIANTS
-    |--------------------------------------------------------------------------
-    */
-    Route::post('products/{product}/variants', [ProductVariantController::class, 'store'])
-        ->name('product_variants.store');
-    Route::delete('variants/{variant}', [ProductVariantController::class, 'destroy'])
-        ->name('product_variants.destroy');
-    Route::get('variants', [ProductVariantController::class, 'index'])
-        ->name('product_variants.index');
-    Route::get('/', function () {
-    return view('welcome');
-});
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ADMIN ORDERS
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/orders', [DashboardController::class, 'orders'])->name('orders.index');
-    Route::get('/orders/{orderId}', [DashboardController::class, 'orderDetail'])->name('orders.detail');
-    Route::post('/orders/{orderId}/update-status', [DashboardController::class, 'updateOrderStatus'])
-        ->name('orders.update_status');
-});
+        
+        // ========== DASHBOARD ==========
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        
+        // ========== PRODUCTS ==========
+        Route::resource('products', AdminProductController::class);
+        
+        // ========== CATEGORIES ==========
+        Route::resource('categories', CategoryController::class);
+        
+        // ========== BRANDS ==========
+        Route::resource('brands', AdminBrandController::class);
+        
+        // ========== PRODUCT VARIANTS ==========
+        // Thêm variant vào sản phẩm
+        Route::post('products/{product}/variants', [ProductVariantController::class, 'store'])
+            ->name('product_variants.store');
+        
+        // Quản lý variants (giữ tên cũ để tương thích với view)
+        Route::prefix('variants')->name('product_variants.')->group(function () {
+            Route::get('/', [ProductVariantController::class, 'index'])->name('index');
+            Route::get('/{variant}/edit', [ProductVariantController::class, 'edit'])->name('edit');
+            Route::put('/{variant}', [ProductVariantController::class, 'update'])->name('update');
+            Route::delete('/{variant}', [ProductVariantController::class, 'destroy'])->name('destroy');
+            Route::post('/{variant}/update-quantity', [ProductVariantController::class, 'updateQuantity'])
+                ->name('update_quantity');
+            Route::post('/bulk-update', [ProductVariantController::class, 'bulkUpdateQuantity'])
+                ->name('bulk_update');
+        });
+        
+        // ========== INVENTORY (KHO HÀNG) ==========
+        Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
+        
+        Route::prefix('inventory')->name('inventory.')->group(function () {
+            Route::post('/variants/{variant}/update-quantity', [InventoryController::class, 'updateQuantity'])
+                ->name('update_quantity');
+            Route::delete('/variants/{variant}', [InventoryController::class, 'destroy'])
+                ->name('destroy');
+            Route::post('/bulk-delete', [InventoryController::class, 'bulkDelete'])
+                ->name('bulk_delete');
+            Route::delete('/products/{product}/delete-all-variants', [InventoryController::class, 'deleteAllVariantsOfProduct'])
+                ->name('delete_all_variants');
+        });
+        
+        // ========== ORDERS ==========
+        Route::prefix('orders')->name('orders.')->group(function () {
+            Route::get('/', [DashboardController::class, 'orders'])->name('index');
+            Route::get('/{orderId}', [DashboardController::class, 'orderDetail'])->name('detail');
+            Route::post('/{orderId}/update-status', [DashboardController::class, 'updateOrderStatus'])
+                ->name('update_status');
+        });
+    });

@@ -34,7 +34,7 @@ class BrandController extends Controller
     {
         $request->validate([
             'name' => 'required|unique:brands,name|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Bắt buộc là ảnh
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ], [
             'name.required' => 'Tên thương hiệu không được để trống.',
             'name.unique' => 'Thương hiệu này đã tồn tại.',
@@ -48,21 +48,18 @@ class BrandController extends Controller
             'is_active' => $request->has('is_active') ? 1 : 0,
         ];
 
-        // --- XỬ LÝ UPLOAD LOGO ---
+        // Xử lý upload logo
         if ($request->hasFile('logo')) {
             $file = $request->file('logo');
-            // Đặt tên file: thời gian_tên gốc (ví dụ: 171123456_nike.jpg)
             $filename = time() . '_' . $file->getClientOriginalName();
-            // Di chuyển vào public/uploads/brands
             $file->move(public_path('uploads/brands'), $filename);
-            
-            // Lưu đường dẫn vào mảng data
             $data['logo'] = 'uploads/brands/' . $filename;
         }
 
         Brand::create($data);
 
-        return redirect()->route('brands.index')->with('success', 'Thêm thương hiệu thành công!');
+        // ✅ SỬA: Redirect về ADMIN brands index
+        return redirect()->route('admin.brands.index')->with('success', 'Thêm thương hiệu thành công!');
     }
 
     /**
@@ -90,7 +87,7 @@ class BrandController extends Controller
             'name' => 'required|max:255|unique:brands,name,'.$brand->id,
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ],[
-        'name.unique' => 'Thương hiệu này đã tồn tại!',
+            'name.unique' => 'Thương hiệu này đã tồn tại!',
         ]);
 
         $data = [
@@ -100,14 +97,14 @@ class BrandController extends Controller
             'is_active' => $request->has('is_active') ? 1 : 0,
         ];
 
-        // --- XỬ LÝ UPLOAD LOGO MỚI ---
+        // Xử lý upload logo mới
         if ($request->hasFile('logo')) {
-            // 1. Xóa ảnh cũ nếu có
+            // Xóa ảnh cũ nếu có
             if ($brand->logo && File::exists(public_path($brand->logo))) {
                 File::delete(public_path($brand->logo));
             }
 
-            // 2. Upload ảnh mới
+            // Upload ảnh mới
             $file = $request->file('logo');
             $filename = time() . '_' . $file->getClientOriginalName();
             $file->move(public_path('uploads/brands'), $filename);
@@ -116,7 +113,8 @@ class BrandController extends Controller
 
         $brand->update($data);
 
-        return redirect()->route('brands.index')->with('success', 'Cập nhật thành công!');
+        // ✅ SỬA: Redirect về ADMIN brands index
+        return redirect()->route('admin.brands.index')->with('success', 'Cập nhật thành công!');
     }
 
     /**
@@ -124,12 +122,14 @@ class BrandController extends Controller
      */
     public function destroy(Brand $brand)
     {
+        // Xóa logo nếu có
         if ($brand->logo && File::exists(public_path($brand->logo))) {
             File::delete(public_path($brand->logo));
         }
 
         $brand->delete();
         
-        return redirect()->route('brands.index')->with('success', 'Đã xóa thương hiệu!');
+        // ✅ SỬA: Redirect về ADMIN brands index
+        return redirect()->route('admin.brands.index')->with('success', 'Đã xóa thương hiệu!');
     }
 }
