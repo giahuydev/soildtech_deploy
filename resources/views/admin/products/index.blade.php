@@ -84,10 +84,16 @@
                         @forelse($products as $product)
                         <tr>
                             <td class="align-middle">
-                                @if($product->img_thumbnail)
-                                    <img src="{{ asset($product->img_thumbnail) }}" 
-                                         alt="{{ $product->name }}"
-                                         class="product-thumb">
+                                @if($product->image_url)
+                                    <img src="{{ $product->image_url }}" 
+                                        alt="{{ $product->name }}"
+                                        class="product-thumb"
+                                        onerror="
+                                            if (!this.dataset.failed) {
+                                                this.dataset.failed = 'true';
+                                                this.src = 'https://via.placeholder.com/80x80/f8f9fa/6c757d?text=No+Image';
+                                            }
+                                        ">
                                 @else
                                     <div class="product-thumb-placeholder">
                                         <i class="fas fa-image text-muted"></i>

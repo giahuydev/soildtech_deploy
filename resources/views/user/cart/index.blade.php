@@ -41,10 +41,17 @@
                                         <tr data-item-id="{{ $item->id }}">
                                             <td class="ps-4">
                                                 <div class="d-flex align-items-center">
-                                                    <img src="{{ $product->img_thumbnail }}" 
-                                                         alt="{{ $product->name }}" 
-                                                         class="rounded"
-                                                         style="width: 80px; height: 80px; object-fit: cover;">
+                                                    <div class="card border-0 shadow-sm">
+                                                        <img src="{{ $product->image_url ?? asset('images/no-image.png') }}" 
+                                                            class="card-img-top" 
+                                                            alt="{{ $product->name }}"
+                                                            onerror="
+                                                                if (!this.dataset.failed) {
+                                                                    this.dataset.failed = 'true';
+                                                                    this.src = 'https://via.placeholder.com/600x600/f8f9fa/6c757d?text={{ urlencode($product->name) }}';
+                                                                }
+                                                            ">
+                                                        </div>
                                                     <div class="ms-3">
                                                         <h6 class="mb-1">{{ $product->name }}</h6>
                                                         <small class="text-muted">

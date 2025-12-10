@@ -4,14 +4,11 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\Brand;
-use Illuminate\Support\Str;           // ← DÒNG NÀY BẮT BUỘC PHẢI CÓ
+use Illuminate\Support\Str;
 use Illuminate\Database\Seeder;
 
 class CategoriesAndBrandsSeeder extends Seeder
 {
-    /**
-     * Tạo danh mục và thương hiệu mẫu
-     */
     public function run(): void
     {
         $this->command->info('Đang tạo Danh mục & Thương hiệu...');
@@ -45,12 +42,18 @@ class CategoriesAndBrandsSeeder extends Seeder
         );
 
         // === THƯƠNG HIỆU ===
-        $brands = ['Nike', 'Adidas', 'Puma', 'Vans', 'Crep Protect'];
+        $brands = [
+            'Nike',
+            'Adidas',
+            'Puma',
+            'Vans',
+            'Reebok',        // ← SỬA LỖI "Rebook"
+            'Crep Protect',  // ← Str::slug sẽ tạo "crep-protect"
+        ];
 
         foreach ($brands as $brand) {
-            $slug = Str::slug($brand);   // ← Giờ không còn lỗi nữa
             Brand::updateOrCreate(
-                ['slug' => $slug],
+                ['slug' => Str::slug($brand)],
                 [
                     'name'      => $brand,
                     'is_active' => true,

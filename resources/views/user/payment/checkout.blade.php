@@ -125,21 +125,24 @@
                                 $price = $product->price_sale ?? $product->price;
                                 $itemTotal = $price * $item->quantity;
                             @endphp
-                            <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
-                                <div class="d-flex align-items-start">
-                                    <img src="{{ $product->img_thumbnail }}" 
-                                         alt="{{ $product->name }}" 
-                                         class="rounded me-2"
-                                         style="width: 50px; height: 50px; object-fit: cover;">
-                                    <div>
-                                        <small class="fw-bold d-block">{{ $product->name }}</small>
-                                        <small class="text-muted">
-                                            Size: {{ $item->variant->size }} | Màu: {{ $item->variant->color }}
-                                        </small>
-                                        <br><small class="text-muted">SL: {{ $item->quantity }}</small>
-                                    </div>
+                            <div class="d-flex align-items-start">
+                                <img src="{{ $product->image_url ?? asset('images/no-image.png') }}" 
+                                    alt="{{ $product->name }}" 
+                                    class="rounded me-2"
+                                    style="width: 50px; height: 50px; object-fit: cover;"
+                                    onerror="
+                                        if (!this.dataset.failed) {
+                                            this.dataset.failed = 'true';
+                                            this.src = 'https://via.placeholder.com/50x50/f8f9fa/6c757d?text=No+Image';
+                                        }
+                                    ">
+                                <div>
+                                    <small class="fw-bold d-block">{{ $product->name }}</small>
+                                    <small class="text-muted">
+                                        Size: {{ $item->variant->size }} | Màu: {{ $item->variant->color }}
+                                    </small>
+                                    <br><small class="text-muted">SL: {{ $item->quantity }}</small>
                                 </div>
-                                <span class="fw-bold text-nowrap ms-2">{{ number_format($itemTotal) }}đ</span>
                             </div>
                         @endforeach
                         

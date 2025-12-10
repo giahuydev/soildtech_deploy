@@ -1,25 +1,42 @@
-<div class="product-card h-100">
-    <!-- Image Container -->
-    <div class="position-relative overflow-hidden rounded-top" style="height: 250px;">
-        <a href="{{ route('shop.detail', $product->slug) }}">
+<div class="product-card h-100 border-0 shadow-sm rounded-3 overflow-hidden bg-white">
+    {{-- Image Section --}}
+    <div class="position-relative overflow-hidden" style="height: 250px; background: #f8f9fa;">
+        <a href="{{ route('shop.detail', $product->slug) }}" class="d-block h-100 w-100 text-decoration-none">
             @php
-                // Xử lý đường dẫn ảnh
-                $imageUrl = $product->img_thumbnail;
-                if (empty($imageUrl)) {
-                    $imageUrl = 'https://placehold.co/400x400/f8f9fa/999?text=No+Image';
-                } elseif (!str_starts_with($imageUrl, 'http')) {
-                    // Nếu không phải URL đầy đủ, thêm /storage
-                    $imageUrl = asset('storage/' . ltrim($imageUrl, '/'));
+                // ĐƠN GIẢN: Xử lý ảnh
+                $imageFile = $product->img_thumbnail ?? '';
+                
+                if (!empty($imageFile) && file_exists(public_path('storage/products/' . $imageFile))) {
+                    // Ảnh tồn tại - dùng asset()
+                    $imageUrl = asset('storage/products/' . $imageFile);
+                } else {
+                    // Ảnh không tồn tại - dùng placeholder đơn giản
+                    $shortName = substr($product->name, 0, 12);
+                    $imageUrl = 'https://via.placeholder.com/400x400/f8f9fa/6c757d?text=' . urlencode($shortName);
                 }
             @endphp
-            <img src="{{ $imageUrl }}" 
-                 class="w-100 h-100 object-fit-cover product-img" 
-                 alt="{{ $product->name }}"
-                 loading="lazy"
-                 onerror="this.src='https://placehold.co/400x400/f8f9fa/999?text=No+Image'">
+
+            <div class="h-100 w-100 d-flex align-items-center justify-content-center p-3">
+                <img src="{{ $product->image_url ?? 'https://via.placeholder.com/400x400/f8f9fa/6c757d?text=No+Image' }}" 
+                    class="product-image"
+                    style="
+                        max-width: 100%;
+                        max-height: 100%;
+                        object-fit: contain;
+                        transition: transform 0.5s ease;
+                    "
+                    alt="{{ $product->name }}"
+                    loading="lazy"
+                    onerror="
+                        if (!this.dataset.failed) {
+                            this.dataset.failed = 'true';
+                            this.src = 'https://via.placeholder.com/400x400/f8f9fa/6c757d?text=No+Image';
+                        }
+                    ">
+            </div>
         </a>
-        
-        <!-- Discount Badge -->
+
+        {{-- Discount Badge --}}
         @if($product->price_sale && $product->price_sale < $product->price)
             @php
                 $discount = round((($product->price - $product->price_sale) / $product->price) * 100);
@@ -28,60 +45,25 @@
                 -{{ $discount }}%
             </span>
         @endif
-        
-        <!-- Action Buttons -->
-        <div class="action-buttons position-absolute top-50 start-50 translate-middle w-100 text-center" 
-             style="opacity: 0; transition: opacity 0.3s;">
-            @auth
-                @if($product->variants->isNotEmpty())
-                    @php
-                        $firstVariant = $product->variants->first();
-                    @endphp
-                    <form action="{{ route('cart.add') }}" method="POST" class="d-inline">
-                        @csrf
-                        <input type="hidden" name="product_id" value="{{ $product->id }}">
-                        <input type="hidden" name="size" value="{{ $firstVariant->size }}">
-                        <input type="hidden" name="color" value="{{ $firstVariant->color }}">
-                        <input type="hidden" name="quantity" value="1">
-                        
-                        <button type="submit" class="btn btn-white rounded-circle shadow me-2" 
-                                title="Thêm vào giỏ">
-                            <i class="bi bi-cart-plus"></i>
-                        </button>
-                    </form>
-                @endif
-            @else
-                <a href="{{ route('login') }}" class="btn btn-white rounded-circle shadow me-2" 
-                   title="Đăng nhập để mua hàng">
-                    <i class="bi bi-cart-plus"></i>
-                </a>
-            @endauth
-            
-            <a href="{{ route('shop.detail', $product->slug) }}" 
-               class="btn btn-white rounded-circle shadow" 
-               title="Xem chi tiết">
-                <i class="bi bi-eye"></i>
-            </a>
-        </div>
     </div>
-    
-    <!-- Card Body -->
+
+    {{-- Product Info --}}
     <div class="card-body p-3">
-        <!-- Brand -->
+        {{-- Brand --}}
         <div class="text-muted text-uppercase small mb-1">
-            {{ $product->brand->name ?? 'Thương hiệu' }}
+            {{ $product->brand->name ?? 'SOLD TECH' }}
         </div>
-        
-        <!-- Product Name -->
+
+        {{-- Product Name --}}
         <h6 class="card-title mb-2" style="height: 40px; overflow: hidden;">
-            <a href="{{ route('shop.detail', $product->slug) }}" 
-               class="text-dark text-decoration-none" 
+            <a href="{{ route('shop.detail', $product->slug) }}"
+               class="text-dark text-decoration-none"
                title="{{ $product->name }}">
-                {{ Str::limit($product->name, 50) }}
+               {{ Str::limit($product->name, 45) }}
             </a>
         </h6>
-        
-        <!-- Price -->
+
+        {{-- Price --}}
         <div class="price-box mb-2">
             @if($product->price_sale && $product->price_sale < $product->price)
                 <span class="text-danger fw-bold fs-5 me-2">
@@ -96,8 +78,8 @@
                 </span>
             @endif
         </div>
-        
-        <!-- Stock Status -->
+
+        {{-- Stock --}}
         @if($product->variants->sum('quantity') > 0)
             <small class="text-success">
                 <i class="bi bi-check-circle-fill"></i> Còn hàng
@@ -112,44 +94,20 @@
 
 <style>
     .product-card {
-        transition: transform 0.3s, box-shadow 0.3s;
-        background: white;
-        border-radius: 8px;
-        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 1px solid #f0f0f0 !important;
     }
-
+    
     .product-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
     }
-
-    .product-card:hover .action-buttons {
-        opacity: 1 !important;
+    
+    .product-card:hover .product-image {
+        transform: scale(1.05);
     }
-
-    .product-card .product-img {
-        transition: transform 0.3s;
-    }
-
-    .product-card:hover .product-img {
-        transform: scale(1.1);
-    }
-
+    
     .product-card .card-title a:hover {
         color: #dc3545 !important;
-    }
-
-    .action-buttons .btn {
-        width: 40px;
-        height: 40px;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .action-buttons .btn:hover {
-        background-color: #dc3545 !important;
-        color: white !important;
     }
 </style>

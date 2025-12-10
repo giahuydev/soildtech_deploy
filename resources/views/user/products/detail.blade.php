@@ -22,7 +22,15 @@
     <div class="row">
         <div class="col-md-6 mb-4">
             <div class="card border-0 shadow-sm">
-                <img src="{{ $product->img_thumbnail }}" class="card-img-top" alt="{{ $product->name }}">
+                <img src="{{ $product->image_url ?? asset('images/no-image.png') }}" 
+                    class="card-img-top" 
+                    alt="{{ $product->name }}"
+                    onerror="
+                        if (!this.dataset.failed) {
+                            this.dataset.failed = 'true';
+                            this.src = 'https://via.placeholder.com/600x600/f8f9fa/6c757d?text={{ urlencode($product->name) }}';
+                        }
+                    ">
             </div>
         </div>
 
@@ -84,7 +92,7 @@
         <div class="row">
             @foreach($relatedProducts as $related)
                 <div class="col-6 col-md-3">
-                     @include('user.product_card', ['product' => $related])
+                     @include('user.partials.product_card', ['product' => $related])
                 </div>
             @endforeach
         </div>
